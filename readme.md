@@ -25,5 +25,5 @@ This plugin is known to have issues with: The display hasn't been found yet.
 # Issues And Requests
 If you find any bugs or glitches, be sure to make a bug report under issues and I will do my best to fix it! Just as well if you have a cool idea for something that I should add, let me know and I will consider adding it!
 
-#Supporting mod/another work
+# Supporting mod/another work
 <a href="https://github.com/SkyIce0229/BackpackSync">BackpackSync Fabric Mod</a> 

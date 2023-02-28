@@ -4,20 +4,16 @@ import com.google.gson.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import tmmi.skyice.spigotbackpacksync.Tools.MysqlUtil;
 
-import java.io.File;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,19 +21,41 @@ import java.util.regex.Pattern;
 public final class SpigotBackpackSync extends JavaPlugin implements Listener {
     private static SpigotBackpackSync instance;
     public static FileConfiguration config;
+    public static String v = "unknown";
     //服务器启动阶段
     @Override
     public void onLoad() {
         instance = this;
         saveDefaultConfig();
         config = getConfig();
-        MysqlUtil.initDatabase();
+        try {
+            v = Bukkit.getServer().getClass().getName().split("\\.")[3];
+        }catch (Error|Exception ignored){}
+        try {
+            MysqlUtil.initDatabase();
+        } catch (Exception e) {
+            getLogger().severe("插件加载时发生错误!数据库初始化失败");
+            getLogger().severe("-------------------------------------------------------");
+            getLogger().severe("当前服务端版本："+v);
+            getLogger().severe("-------------------------------------------------------");
+            getLogger().severe("若有疑问，您可以前往GitHub提交你的问题。");
+            getLogger().severe("为了保证数据安全，将在30秒后关闭服务器。");
+            try {Thread.sleep(30000);} catch (InterruptedException ignored) {}
+            Bukkit.shutdown();
+            setEnabled(false);
+            e.printStackTrace();
+        }
     }
     @Override
     public void onEnable() {
         // Plugin startup logic
         getServer().getPluginManager().registerEvents(this,this);
-        getLogger().info("readly");
+        getLogger().info("-------------------------------------------------------");
+        getLogger().info("插件已就绪");
+        getLogger().info("当前版本："+v);
+        getLogger().info("作者：SkyIce");
+        getLogger().info("-------------------------------------------------------");
+        getLogger().info("感谢您的使用");
     }
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {

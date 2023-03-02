@@ -2,8 +2,11 @@ package tmmi.skyice.spigotbackpacksync;
 
 import com.google.gson.*;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -22,6 +25,7 @@ public final class SpigotBackpackSync extends JavaPlugin implements Listener {
     private static SpigotBackpackSync instance;
     public static FileConfiguration config;
     public static String v = "unknown";
+    public static String version = "unknown";
     //服务器启动阶段
     @Override
     public void onLoad() {
@@ -52,7 +56,6 @@ public final class SpigotBackpackSync extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this,this);
         getLogger().info("-------------------------------------------------------");
         getLogger().info("插件已就绪");
-        getLogger().info("当前版本："+v);
         getLogger().info("作者：SkyIce");
         getLogger().info("-------------------------------------------------------");
         getLogger().info("感谢您的使用");
@@ -60,52 +63,104 @@ public final class SpigotBackpackSync extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
-        String data = MysqlUtil.selectData(uuid);
+        String name = player.getName();
+        String data = MysqlUtil.selectData(name);
         JsonElement jsonElement = new JsonParser().parse(data);
-        // 使用 uuid 来处理您需要的逻辑
+        // 使用 name 来处理您需要的逻辑
         Bukkit.getScheduler().runTaskAsynchronously(SpigotBackpackSync.instance,()->{
-            try {
-                Gson gson = new Gson();
-                JsonObject jsonObject = gson.fromJson(data,JsonObject.class);
 
-                //替换玩家背包
-                //处理字符'b'
-                String inventoryJson = jsonElement.getAsJsonObject().get("inventory").getAsString();
-                Pattern pattern = Pattern.compile("(?<=:)[0-9]+(?=b)");
-                Matcher matcher = pattern.matcher(inventoryJson);
-                while (matcher.find()){
-                    String numStr = matcher.group();
-                    inventoryJson = inventoryJson.replace(numStr + "b",numStr);
-                }
-                JsonArray inventoryArray = JsonParser.parseString(inventoryJson).getAsJsonArray();
-                for (int i = 0; i < inventoryArray.size(); i++) {
-                    JsonObject itemObj = inventoryArray.get(i).getAsJsonObject();
-                    int slot = itemObj.get("Slot").getAsInt();
-                    String itemId = itemObj.get("id").getAsString();
-                    int itemAmount = itemObj.get("Count").getAsInt();
-                    Short itemDamage = 0;
-                    //判断物品是否包含数据标签，如果包含啧解析标签中的Damage
-                    if (itemObj.has("tag")) {
-                        JsonObject tagObj = itemObj.getAsJsonObject("tag");
-                        if (tagObj.has("Damage")) {
-                            itemDamage = tagObj.get("Damage").getAsShort();
-                        }
+                try {
+                    Gson gson = new Gson();
+                    JsonObject jsonObject = gson.fromJson(data,JsonObject.class);
+
+                    //替换玩家背包
+                    //处理字符'b'
+                    String inventoryJson = jsonElement.getAsJsonObject().get("inventory").getAsString();
+                    Pattern pattern = Pattern.compile("(?<=:)[0-9]+(?=b)");
+                    Matcher matcher = pattern.matcher(inventoryJson);
+                    while (matcher.find()){
+                        String numStr = matcher.group();
+                        inventoryJson = inventoryJson.replace(numStr + "b",numStr);
                     }
-                    ItemStack itemStack = new ItemStack(Material.matchMaterial(itemId),itemAmount,itemDamage);
-                    player.getInventory().setItem(slot,itemStack);
+                    JsonArray inventoryArray = JsonParser.parseString(inventoryJson).getAsJsonArray();
+                    for (int i = 0; i < inventoryArray.size(); i++) {
+                        JsonObject itemObj = inventoryArray.get(i).getAsJsonObject();
+                        int slot = itemObj.get("Slot").getAsInt();
+                        String itemId = itemObj.get("id").getAsString();
+                        int itemAmount = itemObj.get("Count").getAsInt();
+                        Short itemDamage = 0;
+                        String itemEnchant = null;
+                        String displayName = null;
+                        // 判断物品是否包含数据标签，如果包含则解析标签中的Damage、Enchantments和display
+                        if (itemObj.has("tag")) {
+                            JsonObject tagObj = itemObj.getAsJsonObject("tag");
+                            if (tagObj.has("Damage")) {
+                                itemDamage = tagObj.get("Damage").getAsShort();
+                            }
+                            if (tagObj.has("Enchantments")) {
+                                JsonArray enchantmentsArray = tagObj.getAsJsonArray("Enchantments");
+                                for (int j = 0; j < enchantmentsArray.size(); j++) {
+                                    JsonObject enchantObj = enchantmentsArray.get(j).getAsJsonObject();
+                                    String enchantId = enchantObj.get("id").getAsString();
+                                    String enchantLevelStr = enchantObj.get("lvl").getAsString().replaceAll("[^0-9]", "");
+                                    int enchantLevel = enchantLevelStr.isEmpty() ? 1 : Integer.parseInt(enchantLevelStr);
+                                    itemEnchant = enchantId + ":" + enchantLevel;
+                                }
+
+                            }
+                            if (tagObj.has("display")) {
+                                JsonObject displayObj = tagObj.getAsJsonObject("display");
+                                if (displayObj.has("Name")) {
+                                    displayName = displayObj.get("Name").getAsString();
+                                }
+
+                            }
+                            // 构造物品堆叠
+                            ItemStack itemStack = new ItemStack(Material.matchMaterial(itemId), itemAmount);
+                            ItemMeta itemMeta = itemStack.getItemMeta();
+                            // 如果物品损坏度不为0则设置损坏度
+                            if (itemDamage != 0) {
+                                itemStack.setDurability(itemDamage);
+                            }
+                            getLogger().info("附魔："+itemEnchant);
+                            // 如果物品有附魔则解析附魔并添加
+                            if (itemEnchant != null) {
+                                String[] enchantSplit = itemEnchant.split(":");
+                                Enchantment enchant = Enchantment.getByKey(NamespacedKey.minecraft(enchantSplit[1]));
+                                getLogger().info("附魔添加前检测"+enchant);
+                                if (enchant != null) {
+                                    int level = Integer.parseInt(enchantSplit[2]);
+                                    itemMeta.addEnchant(enchant,level,true);
+                                    itemStack.setItemMeta(itemMeta);
+
+                                }
+                            }
+                            getLogger().info("成品"+itemStack);
+                            // 如果物品有自定义名称则设置名称
+                            if (displayName != null) {
+                                itemMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', displayName));
+                            }
+
+                            // 将物品设置到指定的物品栏格子里
+                            player.getInventory().setItem(slot, itemStack);
+                            }
+                        }
+
+
+                        Bukkit.getScheduler().runTask(SpigotBackpackSync.instance, () -> {
+                            //替换玩家经验值和等级
+                            float xp = jsonObject.get("xp").getAsFloat();
+                            int level = jsonObject.get("level").getAsInt();
+                            player.setLevel(level);
+                            player.setExp(xp);
+                        });
+                    } catch (JsonSyntaxException e) {
+                    getLogger().warning("玩家背包替换失败");
+                    e.printStackTrace();
+
                 }
-                Bukkit.getScheduler().runTask(SpigotBackpackSync.instance,()-> {
-                    //替换玩家经验值和等级
-                    float xp = jsonObject.get("xp").getAsFloat();
-                    int level = jsonObject.get("level").getAsInt();
-                    player.setLevel(level);
-                    player.setExp(xp);
-                });
-            } catch (JsonSyntaxException e) {
-                getLogger().warning("玩家背包替换失败");
-                e.printStackTrace();
-            }
+
+
 
         });
 
@@ -159,7 +214,7 @@ public final class SpigotBackpackSync extends JavaPlugin implements Listener {
         dataObj.addProperty("level",level);
 
         //将保存好的数据添加到数据库
-        if (MysqlUtil.updataTable(uuid.toString(), dataObj.toString())) {
+        if (MysqlUtil.updataTable(player.getName(), dataObj.toString())) {
             getLogger().info("更新成功");
         }else if ( MysqlUtil.insertTable(uuid.toString(), dataObj.toString())){
             getLogger().info("保存成功");

@@ -3,3 +3,4 @@ version: '${project.version}'
 main: tmmi.skyice.spigotbackpacksync.SpigotBackpackSync
 api-version: 1.19
 authors: [ SkyIce ]
+depend: [NBTAPI]

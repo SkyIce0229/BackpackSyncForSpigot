@@ -3,3 +3,4 @@ mysqlData:
   port: 3306
   username: "root"
   password: ""
+  database: "minecraft"

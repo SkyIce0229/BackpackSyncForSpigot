@@ -29,7 +29,7 @@ public class MysqlUtil{
         String username = (String) SpigotBackpackSync.config.get("mysqlData.username");
         String password = (String) SpigotBackpackSync.config.get("mysqlData.password");
         //数据库名字
-        String sqlName = "backpack";
+        String sqlName = (String) SpigotBackpackSync.config.get("mysql.database");
 
 
         //连接mysql服务
@@ -56,7 +56,7 @@ public class MysqlUtil{
         try (Connection dbConnection = DriverManager.getConnection(url+sqlName,username,password);
              Statement dbstmt = dbConnection.createStatement()) {
             //尝试建表
-            String createtable = "CREATE TABLE IF NOT EXISTS `player_backpack` (`id` bigint NOT NULL AUTO_INCREMENT COMMENT 'id',`name` varchar(36) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,`nbt` text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,PRIMARY KEY (`id`) USING BTREE,UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE)";
+            String createtable = "CREATE TABLE IF NOT EXISTS `backpacksync_player_data` (`id` bigint NOT NULL AUTO_INCREMENT COMMENT 'id',`name` varchar(36) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,`nbt` text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,PRIMARY KEY (`id`) USING BTREE,UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE)";
 
             try {
                 if (dbstmt.executeUpdate(createtable) == 1){
@@ -75,7 +75,7 @@ public class MysqlUtil{
     }
 
     public  static Connection getConnection() throws SQLException {
-        String sqlName = "backpack";
+        String sqlName = (String) SpigotBackpackSync.config.get("mysql.database");
         String ip = (String) SpigotBackpackSync.config.get("mysqlData.ip");
         int port = (int) SpigotBackpackSync.config.get("mysqlData.port");
         String username = (String) SpigotBackpackSync.config.get("mysqlData.username");
@@ -87,7 +87,7 @@ public class MysqlUtil{
 
     public static boolean insertTable (String name, String inventory){
         //插入命令
-        String inserttable = "insert into `player_backpack` (name, nbt) values (?,?)";
+        String inserttable = "insert into `backpacksync_player_data` (name, nbt) values (?,?)";
         //连接数据库
         try (Connection conn = getConnection();PreparedStatement dbstmt = conn.prepareStatement(inserttable)){
             dbstmt.setString(1, name);
@@ -110,7 +110,7 @@ public class MysqlUtil{
 
     public static boolean updataTable (String name, String inventory){
         //插入命令
-        String updatatable = "update player_backpack set nbt = ? where name = ?";
+        String updatatable = "update backpacksync_player_data set nbt = ? where name = ?";
         //连接数据库
         try (Connection conn = getConnection(); PreparedStatement dbstmt = conn.prepareStatement(updatatable)){
             dbstmt.setString(1, inventory);
@@ -137,7 +137,7 @@ public class MysqlUtil{
         //连接数据库
         try (Connection conn = getConnection();Statement dbstmt = conn.createStatement()){
             //查询命令
-            String selectdata = "select nbt from player_backpack where name = '"+name+"'";
+            String selectdata = "select nbt from backpacksync_player_data where name = '"+name+"'";
             try {
                 ResultSet selected = dbstmt.executeQuery(selectdata);
                 if (selected.next()){

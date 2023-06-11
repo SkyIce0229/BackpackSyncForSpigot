@@ -29,7 +29,7 @@ public class MysqlUtil{
         String username = (String) SpigotBackpackSync.config.get("mysqlData.username");
         String password = (String) SpigotBackpackSync.config.get("mysqlData.password");
         //数据库名字
-        String sqlName = (String) SpigotBackpackSync.config.get("mysql.database");
+        String sqlName = (String) SpigotBackpackSync.config.get("mysqlData.database");
 
 
         //连接mysql服务
@@ -75,7 +75,7 @@ public class MysqlUtil{
     }
 
     public  static Connection getConnection() throws SQLException {
-        String sqlName = (String) SpigotBackpackSync.config.get("mysql.database");
+        String sqlName = (String) SpigotBackpackSync.config.get("mysqlData.database");
         String ip = (String) SpigotBackpackSync.config.get("mysqlData.ip");
         int port = (int) SpigotBackpackSync.config.get("mysqlData.port");
         String username = (String) SpigotBackpackSync.config.get("mysqlData.username");
